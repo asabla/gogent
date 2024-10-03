@@ -23,6 +23,7 @@ type RequestSettings struct {
 	Format      string        // Supports only "json" for now. If empty, defaults to "json"
 	Stream      bool          // If the response should be streamed or not, tools require false. Will default to false
 	KeepAlive   time.Duration // How long given model should be kept in memory
+	Seed        int32         // Seed for the model
 	Temperature float32       // Temperature for the model
 }
 
@@ -68,6 +69,18 @@ func (c *OllamaHandler) SendWithMessage(messages []api.Message, reqSettings Requ
 		tools = new([]RequestTool)
 	}
 
+	// TODO: Need to check if messages receieved have a single or multiple tasks in them
+	// as well as the need of running tools.
+	// 1. Have a user/system message which describes how to extract tasks from a single message
+	// 		- maybe a tool which can call the model?
+	// 2. For each task, run a chatrequest and then validate the output if it needs to be re-run
+	//		and if so, then reformat the instruction of the task and run the chatrequest again.
+	//		repeat N amount of times until the output is correct.
+	// 3. Include information about how each task was solved (specifically if a tool was used or not)
+	// 		- might need to be able to attach which request has run a tool or not, and which ones
+	// 4. Merge the response to each task into a single response and return it
+	//		- alternatively, summarize the response to each task and return it
+
 	ctx := context.Background()
 	req := &api.ChatRequest{
 		Model:    reqSettings.Model,
@@ -79,6 +92,7 @@ func (c *OllamaHandler) SendWithMessage(messages []api.Message, reqSettings Requ
 		},
 		Tools: getTools(tools),
 		Options: map[string]interface{}{
+			"seed":        reqSettings.Seed,
 			"temperature": reqSettings.Temperature,
 		},
 	}
@@ -102,11 +116,14 @@ func (c *OllamaHandler) SendWithMessage(messages []api.Message, reqSettings Requ
 				}
 			}
 
+			// TODO: add a flag if this should run or not.
+			// default should be true
+
 			// Send back the tool response, and let current model handle it
 			c.SendWithMessage(messages, reqSettings, tools)
 
 		} else {
-			log.Println("Response: ", resp.Message.Content)
+			log.Println("Response:\n", resp.Message.Content)
 			respString += resp.Message.Content
 		}
 

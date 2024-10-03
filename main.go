@@ -16,11 +16,13 @@ var (
 	Prompt                    = ""
 	Format                    = ""
 	Stream      bool          = false
+	Seed        int32         = 0
 	Temperature float32       = 0.0
 	KeepAlive   time.Duration = 30 * time.Minute
 )
 
 func main() {
+
 	client, err := helper.CreateClient()
 	if err != nil {
 		log.Fatal(err)
@@ -31,7 +33,7 @@ func main() {
 			{
 				// TODO: make these into arguments and/or read from a config file
 				Role:    "system",
-				Content: "Hello, how are you?",
+				Content: "You're an helpful AI, which breaks down the following tasks into smaller tasks and executes them one by one",
 			}, {
 				Role:    "user",
 				Content: "Fetch the contents of this page https://raw.githubusercontent.com/ollama/ollama/main/docs/faq.md and summarize it",
@@ -44,6 +46,7 @@ func main() {
 			Model:       Model,
 			Format:      Format,
 			Stream:      Stream,
+			Seed:        Seed,
 			Temperature: Temperature,
 			KeepAlive:   KeepAlive,
 		},
@@ -79,6 +82,7 @@ func getCurrentTimeTool() helper.RequestTool {
 			},
 		},
 		FunctionCallBack: func(args api.ToolCallFunctionArguments) string {
+			log.Println("Getting date")
 			return time.Now().String()
 		},
 	}
